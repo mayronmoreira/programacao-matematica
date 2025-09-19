@@ -1,0 +1,267 @@
+---
+title: "Simplex"
+jupyter: or_env
+---
+
+## Inicialização do Método Simplex
+
+Em determinados contextos, a partição básica factível inicial nem sempre é trivial de ser obtida. Para tanto, considere o problema descrito abaixo.
+
+### Problema da empresa de manufatura {.unnumbered}
+
+Uma empresa fabrica dois produtos, A e B. O lucro unitário é 3 para A e 2 para B. O contrato com um cliente exige que a soma das produções seja pelo menos 4 unidades. Cada unidade fabricada do produto A requer 6h de produção da máquina, enquanto o produto B requer 2h de trabalho da máquina. Considere a capacidade diária de funcionamento da máquina igual a 12h, e que os produtos, uma vez definidas as quantidades, são produzidos de forma sequencial (não importando a ordem).
+
+**Pergunta:** Quantas unidades de cada produto devem ser produzidas para maximizar o lucro?
+
+#### Variáveis de decisão: {.unnumbered}
+
+-   $x_1 \ge 0$: quantidade de produtos A;\
+-   $x_2 \ge 0$: quantidade de produtos B.
+
+#### Modelo matemático: {.unnumbered}
+
+$$
+\max f(x_1,x_2) = 3x_1 + 2x_2
+$$
+
+Sujeito a:\
+$$
+\begin{cases}
+x_1 + x_2 \geq 4 \\
+6x_1 + 2x_2 \leq 12 \\
+x_1, x_2 \geq 0
+\end{cases}
+$$
+
+#### Representação gráfica do problema {-}
+
+```{python}
+#| echo: false
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+
+# Configurar o gráfico
+fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+
+# Definir o domínio
+x1 = np.linspace(0, 5, 400)
+x2 = np.linspace(0, 8, 400)
+
+# Restrições:
+# 1) x1 + x2 >= 4  =>  x2 >= 4 - x1
+# 2) 6*x1 + 2*x2 <= 12  =>  x2 <= (12 - 6*x1)/2 = 6 - 3*x1
+# 3) x1 >= 0
+# 4) x2 >= 0
+
+# Plotar as linhas das restrições
+x1_line = np.linspace(0, 2, 100)
+
+# Restrição 1: x1 + x2 = 4
+x2_rest1 = 4 - x1_line
+ax.plot(x1_line, x2_rest1, 'r-', linewidth=2, label=r'$x_1 + x_2 = 4$')
+
+# Restrição 2: 6*x1 + 2*x2 = 12
+x2_rest2 = 6 - 3*x1_line
+ax.plot(x1_line, x2_rest2, 'b-', linewidth=2, label=r'$6x_1 + 2x_2 = 12$')
+
+# Encontrar os vértices da região viável
+# Interseções das restrições:
+
+# Vértice 1: Interseção de x1 + x2 = 4 e x1 = 0
+# x2 = 4, então (0, 4)
+v1 = [0, 4]
+
+# Vértice 2: Interseção de x1 + x2 = 4 e 6*x1 + 2*x2 = 12
+# Substituindo x2 = 4 - x1 na segunda equação:
+# 6*x1 + 2*(4 - x1) = 12
+# 6*x1 + 8 - 2*x1 = 12
+# 4*x1 = 4
+# x1 = 1, x2 = 3
+v2 = [1, 3]
+
+# Vértice 3: Interseção de 6*x1 + 2*x2 = 12 e x1 = 0
+# 6*0 + 2*x2 = 12, então x2 = 6
+v3 = [0, 6]
+
+# Vértice 4: Interseção de x1 = 0 e x2 = 0 (origem)
+# Mas isso não satisfaz x1 + x2 >= 4, então não é um vértice válido
+
+# Criar a região viável
+vertices = np.array([v1, v2, v3])  # Removido ponto auxiliar desnecessário
+region = Polygon(vertices, alpha=0.3, color='green', label='Região Viável')
+ax.add_patch(region)
+
+# Marcar os vértices
+vertices_validos = [v1, v2, v3, [0, 0], [2, 0]]
+for i, (x, y) in enumerate(vertices_validos):
+    ax.plot(x, y, 'ko', markersize=8)
+    ax.annotate(f'({x}, {y})', (x, y), xytext=(10, 10), 
+                textcoords='offset points', fontsize=10, fontweight='bold')
+
+# Plotar algumas curvas de nível da função objetivo: 3*x1 + 2*x2 = c
+# Calcular f(x) nos vértices para determinar o range
+f_values = [3*x + 2*y for x, y in vertices_validos]
+print("Valores da função objetivo nos vértices:")
+for i, ((x, y), f_val) in enumerate(zip(vertices_validos, f_values)):
+    print(f"f({x}, {y}) = 3×{x} + 2×{y} = {f_val}")
+
+# Plotar curvas de nível
+c_values = [8, 9, 12]  # Diferentes valores da função objetivo
+for c in c_values:
+    x2_obj = (c - 3*x1_line) / 2
+    ax.plot(x1_line, x2_obj, '--', alpha=0.7, label=f'$3x_1 + 2x_2 = {c}$')
+
+# Configurar o gráfico
+ax.set_xlim(-0.5, 4)
+ax.set_ylim(-0.5, 7)
+ax.set_xlabel(r'$x_1$', fontsize=14)
+ax.set_ylabel(r'$x_2$', fontsize=14)
+ax.grid(True, alpha=0.3)
+ax.legend(loc='upper right')
+ax.set_title(r'Problema de Programação Linear' + '\n' + r'$\max f(x_1,x_2) = 3x_1 + 2x_2$', 
+             fontsize=16, fontweight='bold')
+
+# Adicionar setas indicando as direções das restrições
+ax.annotate(r'$x_1 + x_2 \geq 4$', xy=(1.5, 2.5), xytext=(2.5, 1.5),
+            arrowprops=dict(arrowstyle='->', color='red', alpha=0.7),
+            fontsize=12, color='red')
+
+ax.annotate(r'$6x_1 + 2x_2 \leq 12$', xy=(1, 3), xytext=(0.5, 4.5),
+            arrowprops=dict(arrowstyle='->', color='blue', alpha=0.7),
+            fontsize=12, color='blue')
+
+# Destacar a solução ótima
+max_f = max(f_values)
+optimal_vertex = vertices_validos[f_values.index(max_f)]
+ax.plot(optimal_vertex[0], optimal_vertex[1], 'r*', markersize=15, 
+        label=f'Solução Ótima: f = {max_f}')
+ax.legend(loc='upper right')
+
+plt.tight_layout()
+plt.show()
+
+print(f"\nSolução ótima: x₁ = {optimal_vertex[0]}, x₂ = {optimal_vertex[1]}")
+print(f"Valor máximo da função objetivo: f = {max_f}")
+```
+
+Convertendo o problema na forma padrão, temos:
+
+$$
+\max f(x_1,x_2,x_3,x_4) = -3x_1 -2x_2 + 0x_3 + 0x_4
+$$
+
+Sujeito a:\
+$$
+\begin{cases}
+x_1 + x_2 - x_3 = 4 \\
+6x_1 + 2x_2 + x_4 = 12 \\
+x_1, x_2, x_3, x_4 \geq 0
+\end{cases}
+$$
+
+em que $x_3$ é uma variável de acesso, e $x_4$ é uma variável de folga. Note que escolha pelas
+colunas $x_3$ e $x_4$ como variáveis básicas não gera uma solução básica factível, pois
+$x_3 = -4 < 0$. Assim, não é possível iniciar o método simplex diretamente.
+
+Diante disso, é necessário utilizar o Método das Duas Fases ou Método Big-M para encontrar uma solução básica factível inicial.
+
+### Método das Duas Fases {.unnumbered}
+
+O Método das Duas Fases consiste em resolver um problema artificial na Fase 1, que visa encontrar uma solução básica factível para o problema original. Na Fase 2, o método simplex é aplicado ao problema original, utilizando a solução obtida na Fase 1 como ponto de partida. Para o problema em questão, a Fase 1 pode ser formulada da seguinte maneira:
+
+$$
+\min z = y
+$$
+
+Sujeito a:\
+$$
+\begin{cases}
+x_1 + x_2 - x_3 + y = 4 \\
+6x_1 + 2x_2 + x_4 = 12 \\
+x_1, x_2, x_3, x_4, y \geq 0
+\end{cases}
+$$
+
+em que $y$ é uma variável artificial. Note que se a solução ótima da Fase 1 for $z = 0$, então a solução básica factível encontrada pode ser utilizada como ponto de partida para a Fase 2. Caso contrário, o problema original não possui solução viável.
+
+De forma genérica, representa-se o problema da Fase 1 na forma matricial:
+
+$$
+\min \sum_{i=1}^n y_n
+$$
+
+Sujeito a:\
+$$
+\begin{cases}
+Ax + Iy = b \\
+x, y \geq 0
+\end{cases}
+$$
+
+em que $A \in \mathbb{R}^{m \times n}$ é a matriz dos coeficientes das variáveis originais, $I \in \mathbb{R}^{m \times m}$ é a matriz identidade associada às variáveis artificiais, $x \in \mathbb{R}^n$ é o vetor das variáveis originais, $y \in \mathbb{R}^m$ é o vetor das variáveis artificiais, e $b \in \mathbb{R}^m$ é o vetor dos termos independentes. Note que $A$ deve ser uma matriz de posto completo, ou seja, $\text{rank}(A) = m$.
+
+Agora, basta resolver o problema da Fase I utilizando o método simplex. Caso a solução ótima seja zero, a solução básica factível encontrada pode ser utilizada como ponto de partida para a Fase 2, que consiste em resolver o problema original utilizando o método Simplex (novamente).
+
+### Método Big-M {.unnumbered}
+
+O Método Big-M consiste em adicionar penalidades elevadas às variáveis artificiais na função objetivo do problema original. Assim, o método simplex é aplicado diretamente ao problema modificado, buscando minimizar a função objetivo penalizada. Para o problema em questão, a função objetivo modificada pode ser formulada da seguinte maneira:
+
+$$
+\max f(x_1,x_2,x_3,x_4,y) = -3x_1 -2x_2 + 0x_3 + 0x_4 - My
+$$  
+
+Sujeito a:\
+$$
+\begin{cases}
+x_1 + x_2 - x_3 + y = 4 \\
+6x_1 + 2x_2 + x_4 = 12 \\
+x_1, x_2, x_3, x_4, y \geq 0
+\end{cases}
+$$
+
+em que $M$ é uma constante grande e positiva. Note que a escolha de $M$ deve ser suficientemente grande para garantir que as variáveis artificiais sejam eliminadas da solução ótima, caso o problema original possua solução viável. Isso traz uma dificuldade prática sem sua utilização, pois o valor de $M$ pode influenciar a estabilidade numérica do método Simplex, especialmente na atualização da matriz inversa. Logo, tenha muito cuidado ao escolher o valor dessa constante.
+
+De forma genérica, representa-se o problema na forma matricial da seguinte forma:
+
+$$
+\max c^Tx - My^Te
+$$
+
+Sujeito a:\
+
+$$
+\begin{cases}
+Ax + Iy = b \\
+x, y \geq 0
+\end{cases}
+$$
+
+#### Exercícios {.unnumbered}
+
+1. Considere o seguinte problema de programação linear:
+
+   $$
+   \min f(x_1,x_2) = 2x_1 + x_2
+   $$
+
+   Sujeito a:\
+   $$
+   \begin{cases}
+   -2x_1 + 3x_2 \geq 9 \\
+   3x_1 + 2x_2 \geq 12 \\
+   x_1, x_2 \geq 0
+   \end{cases}
+   $$
+
+   a) Converta o problema para a forma padrão.\
+   b) Desenhe graficamente a região viável e identifique os vértices.\
+   c) Utilize o Método das Duas Fases para encontrar uma solução básica factível inicial.\
+    *  A partir da solução obtida na Fase 1, aplique o método Simplex para encontrar a solução ótima do problema original.\
+   d) Utilize o Método Big-M para encontrar a solução ótima do problema. Tome $M = 100$.\
+
+2. O que pode-se concluir de um problema de programação linear quando a solução ótima da Fase 1 do Método das Duas Fases é maior que zero? Justifique sua resposta algebricamente.   
+
+3. De forma geral, é possivel afirmar que o problema artificial (Método das Duas Fases) possui múltiplas soluções ótimas? Justifique sua resposta.  
+
+4. Suponha que a execução do Método Big-M tenha retornado uma solução ótima em que uma ou mais variáveis artificiais permanecem na base com valor positivo. O que pode-se concluir sobre o problema original? Justifique sua resposta.  

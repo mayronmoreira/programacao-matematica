@@ -1,0 +1,4 @@
+# Métodos de Otimização Discretos
+
+## Modelos de Programação Inteira
+## Métodos exatos e heurísticos

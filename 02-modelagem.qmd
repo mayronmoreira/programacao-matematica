@@ -1,0 +1,38 @@
+# Resolução de Problemas através de Modelos Matemáticos
+
+## Conceitos de modelos matemáticos
+Modelos matemáticos permitem representar situações reais em termos de equações e inequações.
+
+## Formulação matemática de problemas
+Exemplo simples: maximizar lucro de dois produtos.
+
+```{r}
+# Exemplo em R: visualização simples
+library(ggplot2)
+df <- data.frame(x1 = c(0,4,0), x2 = c(0,0,6))
+ggplot(df, aes(x1, x2)) +
+  geom_polygon(fill="lightblue", alpha=0.5) +
+  labs(title="Região viável (exemplo)") +
+  theme_minimal()
+```
+
+## Resolução gráfica
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+
+x1 = np.linspace(0,6,100)
+x2_1 = (12 - 6*x1)/2  # restrição 6x1 + 2x2 <= 12
+x2_2 = 4 - x1         # restrição x1 + x2 >= 4
+
+plt.plot(x1, x2_1, label="6x1 + 2x2 <= 12")
+plt.plot(x1, x2_2, label="x1 + x2 >= 4")
+plt.xlim(0,6)
+plt.ylim(0,6)
+plt.fill_between(x1, np.maximum(0,x2_2), np.minimum(x2_1,6), color="lightblue", alpha=0.5)
+plt.xlabel("x1")
+plt.ylabel("x2")
+plt.legend()
+plt.title("Região viável")
+plt.show()
+```

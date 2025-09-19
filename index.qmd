@@ -1,0 +1,26 @@
+# Programação Matemática
+
+Essas notas de aula seguem a ementa da disciplina **GCC118 – Programação Matemática**  
+da Universidade Federal de Lavras (UFLA).
+
+- Carga horária: 68h
+- Créditos: 4
+
+## Ementa
+
+Modelagem. Fundamentos de programação matemática. Programação linear e suas aplicações.  
+Método simplex. Análise de sensibilidade e dualidade. Otimização em redes.  
+Programação dinâmica.
+
+## Bibliografia Básica
+
+- Hillier, F. S.; Lieberman, G. J. *Introdução à Pesquisa Operacional*. AMGH, 2013.  
+- Arenales, M. et al. *Pesquisa Operacional*. Elsevier, 2007.  
+- Taha, H. A. *Pesquisa Operacional: uma visão geral*. Pearson, 2008.
+
+## Autores
+
+- [Andreza C. Beezão Moreira (DMM/UFLA)](http://lattes.cnpq.br/8404339310887345)  
+    - [andreza.moreira@ufla.br](mailto:andreza.moreira@ufla.br)
+- [Mayron César O. Moreira (DCC/UFLA)](http://lattes.cnpq.br/0935496725221542)  
+    - [mayron.moreira@ufla.br](mailto:mayron.moreira@ufla.br)

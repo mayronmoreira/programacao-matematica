@@ -1,0 +1,6 @@
+# Conceitos de Dualidade e Sensibilidade
+
+## Introdução à dualidade
+## Folgas complementares
+## Dual Simplex
+## Análise de sensibilidade
