@@ -12,7 +12,7 @@ book:
     #- 02-modelagem.qmd
     - 03-simplex.qmd
     #- 04-dualidade.qmd
-    #- 05-otimizacao-discreta.qmd
+    - 05-otimizacao-discreta.qmd
     #- 06-fluxo-redes.qmd
     #- 07-avaliacao.qmd
     #- 08-exercicios.qmd

@@ -1,4 +1,453 @@
 # Métodos de Otimização Discretos
 
+> "... Te falo mil razões que me invadem   
+> Preciso de você o **mundo inteiro**"  
+> — Roberta Campos (["Mundo Inteiro", do álbum "Varrendo a lua", 2009](https://www.youtube.com/watch?v=VIHQQN2_eYI))
+
+Na primeira parte do curso, estudamos métodos de otimização contínuos, onde as variáveis de decisão podem assumir qualquer valor real. No entanto, muitos problemas do mundo real exigem que as variáveis sejam discretas, ou seja, assumam valores inteiros ou binários. Esses problemas são conhecidos como problemas de otimização discreta e incluem uma ampla gama de aplicações, desde a alocação de recursos até o planejamento de rotas.
+
+Uma pergunta natural que surge é: por que precisamos de métodos específicos para otimização discreta? E se utilizássemos o arredondamento de soluções ótimas fracionárias obtidas, por exemplo, pelo Método Simplex? Apesar da hipótese não ser de toda a forma errada, o arredondamento pode levar a soluções inviáveis ou subótimas. Vejamos um exemplo abaixo, extraído da obra de [@wolsey1998integer].   
+
+$$
+\max f(x_1,x_2) = x_1 + 0,64x_2
+$$
+
+Sujeito a:\
+$$
+\begin{cases}
+50x_1 + 31x_2 \leq 250 \\
+3x_1 - 2x_2 \geq -4 \\
+x_1, x_2 \in \mathbb{Z}_+
+\end{cases}
+$$
+
+O gráfico da região viável é apresentado a seguir:
+
+```{python}
+#| echo: false
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Restrição 1: 50x1 + 31x2 <= 250
+# Restrição 2: 3x1 - 2x2 >= -4
+# x1, x2 >= 0 e inteiros
+
+x1_max = 5  # máximo possível para x1 dado restrição 1
+x2_max = 8  # máximo possível para x2 dado restrição 1
+
+# Gera todos os pontos inteiros viáveis
+viaveis = []
+for x1 in range(x1_max + 1):
+    for x2 in range(x2_max + 1):
+        if (50*x1 + 31*x2 <= 250) and (3*x1 - 2*x2 >= -4):
+            viaveis.append((x1, x2))
+
+viaveis = np.array(viaveis)
+
+# Solução ótima inteira
+opt_int = (5, 0)
+
+# Solução ótima fracionária (Simplex)
+opt_frac = (376/193, 950/193)
+
+plt.figure(figsize=(7, 6))
+
+# Plota região viável (pontos inteiros)
+plt.scatter(viaveis[:,0], viaveis[:,1], color='lightblue', s=60, label='Pontos inteiros viáveis')
+
+# Plota solução ótima inteira
+plt.scatter(*opt_int, color='red', s=120, edgecolor='black', zorder=5)
+plt.text(opt_int[0]+0.1, opt_int[1], r'$\mathbf{(5,\ 0)}$', color='red', fontsize=14, fontweight='bold')
+
+# Plota solução ótima fracionária
+plt.scatter(*opt_frac, color='black', s=120, edgecolor='black', zorder=5)
+plt.text(opt_frac[0]+0.1, opt_frac[1], r'$\mathbf{(\frac{376}{193},\ \frac{950}{193})}$', color='black', fontsize=14, fontweight='bold')
+
+# Plota as restrições como linhas
+x1 = np.linspace(0, x1_max, 200)
+x2_1 = (250 - 50*x1)/31
+x2_2 = (3*x1 + 4)/2
+
+plt.plot(x1, x2_1, 'g--', label=r'$50x_1 + 31x_2 = 250$')
+plt.plot(x1, x2_2, 'b--', label=r'$3x_1 - 2x_2 = -4$')
+
+plt.xlim(-0.5, x1_max+1)
+plt.ylim(-0.5, x2_max+1)
+plt.xlabel(r'$x_1$')
+plt.ylabel(r'$x_2$')
+plt.legend()
+plt.title('Região viável e soluções ótimas')
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+```
+
+Note que o ponto ótimo fracionário (obtido pelo método simplex) é $(\frac{376}{193}, \frac{950}{193}) \approx (1,95; 4,92)$, com valor da função objetivo $f \approx 4,14$. Se arredondarmos esse ponto para o inteiro mais próximo, obteremos a solução $(2, 5)$, que é inviável. A solução ótima inteira é $(5, 0)$, com valor da função objetivo $f = 5$. Isso ilustra que nem sempre um arredondamento simples resolverá o problema, evidenciando a importância de métodos específicos para otimização discreta.
+
+Nosso objetivo é encontrar a envoltória convexa dos pontos inteiros viáveis e, em seguida, determinar o ponto que maximiza (ou minimiza) a função objetivo dentro dessa envoltória. No entanto, essa tarefa pode ser computacionalmente desafiadora, especialmente para problemas de grande escala. Formalmente, define-se o conceito de **envoltória convexa inteira** da seguinte forma.
+
+::: callout-note
+## Definição 1 (Poliedro)
+
+Um poliedro é um subconjunto do $\mathbb{R}^n$ descrito por um conjunto finito de restriçẽs lineares. Formalmente, nota-se por $P = \{x \in \mathbb{R}^n|Ax\le b\}$.
+:::
+
+::: callout-note
+## Definição 2 (Formulação)
+
+Um polígono $P \subseteq \mathbb{R}^{n+p}$ é uma formulação para um conjunto $\mathcal{X} \subseteq \mathbb{Z}^n \times \mathbb{R}^p$ se, e somente se, $\mathcal{X} = P \cap (\mathbb{Z}^n \times \mathbb{R}^p)$.
+:::
+
+::: callout-note
+## Definição 3 (Envoltória Convexa)
+
+Dado um conjunto $\mathcal{X} \subseteq \mathbb{R}^n$, a envoltória convexa de um conjunto $\mathcal{X}$, denotada por$\text{Conv}(\mathcal{X})$, é definida por:
+
+$$
+\text{Conv}(\mathcal{X}) = \left\{x=\sum_{i=1}^{k} \lambda_i x^i \mid k \geq 1, x^i \in \mathcal{X}, \lambda_i \geq 0, \sum_{i=1}^{k} \lambda_i = 1, i=1,\ldots,k\right\}.
+$$
+:::
+
+
+A figura abaixo apresenta um exemplo de comparação de formulações, em que a formulação P1 é a mais fraca (maior área), P2 é intermediária e P3 é a mais forte (envoltória convexa dos pontos inteiros viáveis).
+
+```{python}
+#| echo: false
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.spatial import ConvexHull
+
+# Criar figura única
+fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+
+# Pontos inteiros factíveis (mesmos para todas as formulações)
+pontos_inteiros = np.array([
+    [2, 2],
+    [3, 2],
+    [4, 2],
+    [2, 3],
+    [3, 3],
+    [4, 3],
+    [2, 4],
+    [3, 4]
+])
+
+# ==========================
+# P1 - Formulação FRACA (polígono mais externo)
+# ==========================
+P1_vertices = np.array([
+    [1, 1],
+    [1, 5.5],
+    [5.5, 5.5],
+    [5.5, 1],
+    [1, 1]
+])
+
+ax.fill(P1_vertices[:, 0], P1_vertices[:, 1], 
+        color='lightcoral', alpha=0.25, edgecolor='red', 
+        linewidth=3, linestyle='-', label='P1 - Formulação FRACA')
+
+# ==========================
+# P2 - Formulação INTERMEDIÁRIA (polígono médio)
+# ==========================
+P2_vertices = np.array([
+    [1.5, 1.5],
+    [1.5, 4.8],
+    [2, 5],
+    [4.5, 5],
+    [5, 4.5],
+    [5, 1.5],
+    [4.5, 1.2],
+    [1.5, 1.5]
+])
+
+ax.fill(P2_vertices[:, 0], P2_vertices[:, 1], 
+        color='lightyellow', alpha=0.4, edgecolor='orange', 
+        linewidth=3, linestyle='--', label='P2 - Formulação INTERMEDIÁRIA')
+
+# ==========================
+# P3 - Formulação FORTE/IDEAL (polígono mais interno)
+# ==========================
+# Envoltória convexa dos pontos inteiros
+hull = ConvexHull(pontos_inteiros)
+P3_vertices = pontos_inteiros[hull.vertices]
+P3_vertices = np.vstack([P3_vertices, P3_vertices[0]])
+
+ax.fill(P3_vertices[:, 0], P3_vertices[:, 1], 
+        color='lightgreen', alpha=0.5, edgecolor='darkgreen', 
+        linewidth=3, linestyle='-.', label='P3 - Formulação FORTE (Ideal)')
+
+# ==========================
+# Pontos inteiros factíveis
+# ==========================
+ax.plot(pontos_inteiros[:, 0], pontos_inteiros[:, 1], 
+        'o', markersize=12, markerfacecolor='blue', 
+        markeredgecolor='darkblue', markeredgewidth=2.5, 
+        label='Pontos Inteiros Factíveis', zorder=10)
+
+# Adicionar anotações nos pontos
+for i, ponto in enumerate(pontos_inteiros):
+    ax.annotate(f'({ponto[0]},{ponto[1]})', 
+                xy=ponto, xytext=(5, 5), 
+                textcoords='offset points', 
+                fontsize=8, alpha=0.7)
+
+# Configurações do gráfico
+ax.set_xlim(-0.5, 6.5)
+ax.set_ylim(-0.5, 6.5)
+ax.set_aspect('equal')
+ax.grid(True, alpha=0.3, linestyle=':', linewidth=1)
+ax.axhline(y=0, color='black', linewidth=1.5)
+ax.axvline(x=0, color='black', linewidth=1.5)
+ax.set_xlabel('x₁', fontsize=14, fontweight='bold')
+ax.set_ylabel('x₂', fontsize=14, fontweight='bold')
+ax.set_title('Comparação de Formulações Inteiras\nP1 (Fraca) ⊃ P2 (Intermediária) ⊃ P3 (Forte/Ideal)', 
+             fontsize=15, fontweight='bold', pad=20)
+
+# Legenda fora do gráfico
+ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=10, 
+          framealpha=0.95, shadow=True, borderpad=1)
+
+# Ticks
+ax.set_xticks(range(7))
+ax.set_yticks(range(7))
+
+# Adicionar texto explicativo fora do gráfico
+texto_info = ("P1: Relaxação fraca\n     (maior área)\n\n"
+              "P2: Relaxação\n     intermediária\n\n"
+              "P3: Ideal\n     (envoltória convexa)")
+ax.text(1.02, 0.05, texto_info, fontsize=9, 
+        bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.9),
+        transform=ax.transAxes, verticalalignment='bottom')
+
+plt.tight_layout()
+plt.show()
+```
+
+E quando não temos os gráficos das formulações, para que visualmente comparemos as forças das formulações? Como saber qual é a melhor? Considere um problema com quatro variáveis de decisão binárias $x_1, x_2, x_3, x_4 \in \{0,1\}$. A formulação $P_1$ é dada por:
+
+$$
+x_2 + x_3 + x_4 \le 3x_1
+$$
+
+Já a formulação $P_2$ é dada por:
+
+$$
+\begin{alignat*}{1}
+x_2 \le x_1 \\ 
+x_3 \le x_1 \\ 
+x_4 \le x_1
+\end{alignat*}
+$$
+
+Em ambos os casos, o conjunto de soluções inteiras viáveis é o mesmo, ou seja, $\mathcal{X} = \{(0,0,0,0), (1,0,0,0), (1,1,0,0), (1,1,1,0), (1,1,1,1)\}$. O conjunto de restrições ativa a variável $x_1$ em 1 se qualquer uma das variáveis $x_2, x_3$ ou $x_4$ for 1. No entanto, a formulação $P_2$ é mais forte do que $P_1$, pois sua envoltória convexa é menor e mais próxima dos pontos inteiros viáveis. Isso pode ser verificado da seguinte forma: uma solução viável para o problema relaxado (onde as variáveis podem assumir valores fracionários) é dada por:   
+- $(x_1, x_2, x_3, x_4) = (\frac{1}{3}, 1, 1, 1)$ é viável para $P_1$ (pois $1 + 1 + 1 \le 3\times\frac{1}{3}$), mas não é viável para $P_2$, pois $1$ não é menor ou igual a $\frac{1}{3}$.
+
+Diante disso, pode-se dizer que $P_2$ é uma formulação que domina $P_1$. Formalmente, define-se o conceito de formulação dominante da seguinte forma.
+
+::: callout-note
+## Definição 4 (Formulação Dominante)
+Dado um conjunto $\mathcal{X} \subseteq \mathbb{Z}^n$, sejam $P_1$ e $P_2$ duas formulações para $\mathcal{X}$. Diz-se que $P_2$ domina $P_1$ se, e somente se, $P_2 \subset P_1$.
+:::
+
 ## Modelos de Programação Inteira
-## Métodos exatos e heurísticos
+
+@wolsey1998integer define os problemas de programação inteira estudados neste curso como segue:
+
+**Problema de Programação Linear Inteiro Misto**
+
+$$
+\begin{align}
+\max \quad & cx + dy \\
+\text{s.a.} \quad & Ax + Gy \leq b \\
+& x \geq 0, y \geq 0 \text{ e inteiro}
+\end{align}
+$$
+
+---
+
+**Problema de Programação Linear Inteiro**
+
+$$
+\begin{align}
+\max \quad & cx \\
+\text{s.a.} \quad & Ax \leq b \\
+& x \geq 0 \text{ e inteiro}
+\end{align}
+$$
+
+---
+
+**Problema de Programação Binária**
+
+$$
+\begin{align}
+\max \quad & cx \\
+\text{s.a.} \quad & Ax \leq b \\
+& x \in \{0,1\}^n
+\end{align}
+$$
+
+---
+
+Considere o exemplo do problema de *mix* de produção de mesas e cadeiras feitas com peças de Lego, apresentado em [@cochran2015extending]. A maneira correta de considerar sua formulação é como um problema de programação inteira, uma vez que não faz sentido produzir uma fração de uma mesa ou cadeira. O modelo matemático mais propriado para descrever o problema é dado por:
+
+- $x_1$ = número de mesas a produzir
+- $x_2$ = número de cadeiras a produzir
+
+**Função Objetivo**
+
+$$
+\max Z = 16x_1 + 10x_2
+$$
+
+Maximizar o lucro total, onde cada mesa gera lucro de 16 unidades monetárias e cada cadeira gera lucro de 10 unidades monetárias.
+
+**Restrições**
+
+$$
+\begin{align}
+2x_1 + 2x_2 &\leq 8 \quad \text{(peças pequenas)} \\
+2x_1 + x_2 &\leq 6 \quad \text{(peças grandes)} \\
+\end{align}
+$$
+
+Restrições de recursos, em que a primeira limita o uso de peças pequenas a 8 unidades e a segunda limita o uso de peças grandes a 6 unidades.
+
+**Não-negatividade**
+
+$$
+x_1, x_2 \in \mathbb{Z}^+.
+$$
+
+
+As próximas seções exploram diferentes formas de modelar problemas de otimização discreta, além da apresentação de alguns problemas clássicos de otimização com variáveis inteiras ou binárias.
+
+## Modelagem com variáveis discretas
+
+A modelagem de problemas de otimização com variáveis discretas envolve a definição de variáveis que podem assumir apenas valores inteiros ou binários. Isso é particularmente útil em situações onde as decisões a serem tomadas são discretas por natureza, como a seleção de itens, alocação de recursos ou programação de tarefas. A seguir, são apresentados alguns exemplos de modelagem com variáveis discretas. Os exemplos discutidos são baseados em [@arenales2007], [@coelho2013linearization] e [@asghari2022transformation].
+
+### Implicações "se-então"
+
+1. Considere a seguinte situação: a produção do item **"A"** implica em um custo fixo de preparação da máquina. Podemos analisar esta situação a partir da Figura abaixo e da função $K(x)$, apresentada a seguir:
+
+$$
+K(x) = 
+\begin{cases}
+s + cx, & x>0 \\
+0, & x = 0 
+\end{cases}
+$$
+
+em que $x \in \mathbb{Z}$ indica a quantidade do item **"A"** produzida, $s$ é o custo de preparação da máquina e $c$ é o custo de produzir uma unidade de **"A"**. Como podemos modelar $K(x)$ de maneira linear?
+
+2. Considere a seguinte situação: se o item **"A"** for fabricado, o item **"B"** também será fabricado, a uma quantidade de pelo menos $m$ unidades. Como modelamos estas restrições linearmente?
+
+3. Suponha que 4 itens podem ser produzidos em uma máquina denotada por $k$, e se o item 1 é produzido em $k$, então os outros itens 2, 3 e 4 não podem ser processados em $k$ e devem ser processados em outras máquinas. Como modelar essas condições?
+
+---
+
+### Ativação/desativação de restrições
+
+Considere uma restrição $x_1 + x_2 - 10 \le 0$. Desejamos que essa restrição seja ativada (considerada) se $y=0$ e desativada (ignorada) se $y=1$, em que $y \in \{0,1\}$. Como modelar essa situação linearmente?
+
+---
+
+### Restrições disjuntivas
+
+Considere as seguintes restrições: $(i) 4x_1 + 2x_2 \le 80$ e $(ii) 2x_1 + 5x_2 \le 100$, $x_1, x_2 \ge 0$. Quando $4x_1 + 2x_2 - 80 \le 0$ (restrição ativada), desejamos que a reta de $(ii)$ seja transladada para $2x_1 + 5x_2 \le 200$. Por outro lado, se $2x_1 + 5x_2 - 100 \le 0$, desejamos que a reta em $(i)$ seja transladada para $4x_1 + 2x_2 \le 200$. Como modelar essa situação linearmente?
+
+---
+
+### Representação de função linear por partes
+
+Considere uma função de custo de produção $C(x)$ que varia de acordo com a quantidade produzida:
+
+$$
+C(x) = \begin{cases}
+5x & \text{se } 0 \leq x \leq 100 \\
+500 + 3x & \text{se } 100 < x \leq 200 \\
+800 + 2x & \text{se } 200 < x \leq 300 \\
+1400 + x & \text{se } x > 300
+\end{cases}
+$$
+
+**Interpretação:** O custo unitário diminui conforme a produção aumenta (economias de escala).
+
+**Linearização**  
+
+*Variáveis de Decisão:*
+
+- $x$: quantidade total produzida
+- $x_1$: quantidade produzida na faixa $[0, 100]$
+- $x_2$: quantidade produzida na faixa $(100, 200]$
+- $x_3$: quantidade produzida na faixa $(200, 300]$
+- $x_4$: quantidade produzida na faixa $(300, \infty)$
+- $y_1, y_2, y_3, y_4 \in \{0,1\}$: variáveis binárias indicando se cada faixa é utilizada
+
+**Modelo Linearizado**
+
+$$
+\begin{align}
+\min \quad & C = 5x_1 + 3x_2 + 2x_3 + x_4 + 500y_2 + 800y_3 + 1400y_4 \\
+\text{s.a.} \quad & x = x_1 + x_2 + x_3 + x_4 \\
+& x_1 \leq 100y_1 \\
+& x_2 \leq 100y_2 \\
+& x_3 \leq 100y_3 \\
+& x_4 \leq My_4 \quad \text{(M suficientemente grande)} \\
+& y_1 \geq y_2 \geq y_3 \geq y_4 \quad \text{(ordem de ativação)} \\
+& y_1 \leq 1 \\
+& x_1, x_2, x_3, x_4 \geq 0 \\
+& y_1, y_2, y_3, y_4 \in \{0,1\}
+\end{align}
+$$
+
+**Restrições Explicadas**
+
+1. **Decomposição da produção:** $x = x_1 + x_2 + x_3 + x_4$
+2. **Limites por faixa:** Cada $x_i$ só pode ser positivo se $y_i = 1$
+3. **Ordem sequencial:** As faixas devem ser preenchidas em ordem ($y_1 \geq y_2 \geq y_3 \geq y_4$)
+4. **Custos fixos:** Os termos $500y_2$, $800y_3$ e $1400y_4$ representam os custos fixos acumulados
+
+---
+
+### Relações lógicas
+
+
+Uma empresa dispõe de cinco possibilidades de investimento. Modele os seguintes casos:  
+
+1. No máximo três investimentos devem ser selecionados.  
+2. O investimento 1 ou 2 é selecionado.  
+3. Se o investimento 2 é selecionado, então o investimento 1 será selecionado.  
+4. Se os investimentos 2, 3 ou 4 são selecionados, então o investimento 1 é selecionado.  
+
+---
+
+### Representação de valores discretos
+
+Suponha que a variável $x \in \{4,6,8,12,20,24\}$. Como definir $x$ em um problema inteiro?
+  
+---
+
+### Linearizações mais complexas
+
+Exemplos de linearizações que contemplam produtos entre variáveis binárias e contínuas, produtos entre variáveis binárias, produtos entre variáveis inteiras, função modular, entre outros, podem ser vistos em [@coelho2013linearization] e [@asghari2022transformation].
+
+## Problemas clássicos de otimização discreta
+
+O ex-jogador de futebol [Jardel](https://pt.wikipedia.org/wiki/Jardel) já dizia: "Clássico é clássico e vice-versa". A frase, mesmo que encarada de forma "extrovertida", mostra a relevância de voltar o foco para os clássicos, que emergem eventos esportivos singulares, parte da tradição ludopédica regional. Em Pesquisa Operacional, as formulações dos problemas clássicos são de extrema importância, pois servem como base para o desenvolvimento de novos modelos e algoritmos. A seguir, são apresentados alguns dos problemas clássicos de otimização discreta, juntamente com suas formulações matemáticas. Os exemplos discutidos são baseados em [@hillier2013introducao], [@arenales2007] e [@taha2008operations].
+
+### Pokemon Go Problem
+O problema do Pokemon Go é um exemplo clássico de otimização discreta, onde o objetivo é capturar um conjunto de Pokemons em um mapa, minimizando a distância percorrida pelo jogador. Como formular esse problema?
+
+![PokemonGo Problem - *Figura gerada pelo Gemini*](imagens/pokemon_go_gemini.png)
+
+*Figura: Exemplo do problema do Pokemon Go, onde o objetivo é otimizar a captura de Pokemons em um mapa, minimizando a distância percorrida pelo jogador.*
+
+### Problema da Mochila (Knapsack Problem)
+
+O problema da mochila é um problema clássico de otimização discreta, onde o objetivo é maximizar o valor total dos itens colocados em uma mochila, sem exceder sua capacidade. Considere uma mochila com capacidade $W$ e um conjunto de $n$ itens, cada um com peso $w_i$ e valor $v_i$. Como formular esse problema?
+
+![Problema da Mochila - *Figura gerada pelo Gemini*](imagens/mochila.png)
+
+*Figura: Exemplo do problema da mochila, onde o objetivo é maximizar o valor total dos itens colocados em uma mochila, sem exceder sua capacidade.*
