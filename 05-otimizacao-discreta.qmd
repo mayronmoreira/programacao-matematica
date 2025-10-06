@@ -435,7 +435,7 @@ Exemplos de linearizações que contemplam produtos entre variáveis binárias e
 
 ## Problemas clássicos de otimização discreta
 
-O ex-jogador de futebol [Jardel](https://pt.wikipedia.org/wiki/Jardel) já dizia: "Clássico é clássico e vice-versa". A frase, mesmo que encarada de forma "extrovertida", mostra a relevância de voltar o foco para os clássicos, que emergem eventos esportivos singulares, parte da tradição ludopédica regional. Em Pesquisa Operacional, as formulações dos problemas clássicos são de extrema importância, pois servem como base para o desenvolvimento de novos modelos e algoritmos. A seguir, são apresentados alguns dos problemas clássicos de otimização discreta, juntamente com suas formulações matemáticas. Os exemplos discutidos são baseados em [@hillier2013introducao], [@arenales2007] e [@taha2008operations].
+O ex-jogador de futebol [Jardel](https://pt.wikipedia.org/wiki/Jardel) já dizia: "Clássico é clássico e vice-versa". A frase, mesmo que encarada de forma "extrovertida", mostra a relevância de voltar o foco para os clássicos, que emergem eventos esportivos singulares, parte da tradição ludopédica regional. Em Pesquisa Operacional, as formulações dos problemas clássicos são de extrema importância, pois servem como base para o desenvolvimento de novos modelos e algoritmos. A seguir, são apresentados alguns dos problemas clássicos de otimização discreta, juntamente com suas formulações matemáticas. Os exemplos discutidos são baseados em [@hillier2013], [@arenales2007] e [@taha2008].
 
 ### Pokemon Go Problem
 O problema do Pokemon Go é um exemplo clássico de otimização discreta, onde o objetivo é capturar um conjunto de Pokemons em um mapa, minimizando a distância percorrida pelo jogador. Como formular esse problema?
