@@ -82,7 +82,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-Note que o ponto ótimo fracionário (obtido pelo método simplex) é $(\frac{376}{193}, \frac{950}{193}) \approx (1,95; 4,92)$, com valor da função objetivo $f \approx 4,14$. Se arredondarmos esse ponto para o inteiro mais próximo, obteremos a solução $(2, 5)$, que é inviável. A solução ótima inteira é $(5, 0)$, com valor da função objetivo $f = 5$. Isso ilustra que nem sempre um arredondamento simples resolverá o problema, evidenciando a importância de métodos específicos para otimização discreta.
+Note que o ponto ótimo fracionário (obtido pelo método simplex) é $(\frac{376}{193}, \frac{950}{193}) \approx (1,95; 4,92)$, com valor da função objetivo $f \approx 5,09$. Se arredondarmos esse ponto para o inteiro mais próximo, obteremos a solução $(2, 5)$, que é inviável. A solução ótima inteira é $(5, 0)$, com valor da função objetivo $f = 5$. Isso ilustra que nem sempre um arredondamento simples resolverá o problema, evidenciando a importância de métodos específicos para otimização discreta.
 
 Nosso objetivo é encontrar a envoltória convexa dos pontos inteiros viáveis e, em seguida, determinar o ponto que maximiza (ou minimiza) a função objetivo dentro dessa envoltória. No entanto, essa tarefa pode ser computacionalmente desafiadora, especialmente para problemas de grande escala. Formalmente, define-se o conceito de **envoltória convexa inteira** da seguinte forma.
 
